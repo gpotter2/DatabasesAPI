@@ -340,7 +340,6 @@ public class DatabasesHandler {
 			} else if(database_used.equals(DatabaseType.SQLITE)){
 				SQLite db = new SQLite();
 				try {
-					System.out.println("DEBUG='" + table + "'");
 					if(!db.checkTable(table)){
 						createTable();
 					}
@@ -408,7 +407,6 @@ public class DatabasesHandler {
                 	List<String> all_commands = getValueCommandStringUpdate(column_refer, key_not_changed, keys, values);
                 	db.open(path, false);
                 	for(String command : all_commands){
-                		System.out.println(command);
 	            		db.update(command);
 	            	}
                 } catch (SQLException ex) {
