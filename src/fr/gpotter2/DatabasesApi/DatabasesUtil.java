@@ -16,7 +16,7 @@
  * 
  */
 
-package test.test.test.databases;
+package fr.cabricraft.batofb.util;
 
 import java.net.ConnectException;
 import java.sql.Connection;
@@ -36,15 +36,15 @@ public class DatabasesUtil {
 
 	public static class DataObject {
 		
-		private String data;
+		private Object data;
 		private String key;
 		
-		public DataObject(String data, String key){
+		public DataObject(String key, Object data){
 			this.data = data;
 			this.key = key;
 		}
 		
-		public String getData(){
+		public Object getData(){
 			return data;
 		}
 		

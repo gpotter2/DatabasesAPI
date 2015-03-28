@@ -16,7 +16,7 @@
  * 
  */
 
-package test.test.test.databases;
+package fr.cabricraft.batofb.util;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,9 +28,9 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import test.test.test.databases.DatabasesUtil.DataObject;
-import test.test.test.databases.DatabasesUtil.MySQL;
-import test.test.test.databases.DatabasesUtil.SQLite;
+import fr.cabricraft.batofb.util.DatabasesUtil.DataObject;
+import fr.cabricraft.batofb.util.DatabasesUtil.MySQL;
+import fr.cabricraft.batofb.util.DatabasesUtil.SQLite;
 
 /**
  * 
@@ -178,6 +178,24 @@ public class DatabasesHandler {
 		}
 	}
 	
+	public static class Condition {
+		String key;
+		String column_key;
+		
+		/**
+		 * Used with:<br/>
+		 * WHERE [column_key]=[key]
+		 * 
+		 * @author gpotter2
+		 *
+		 */
+		
+		public Condition(String column_key, String key){
+			this.key = key;
+			this.column_key = column_key;
+		}
+	}
+	
 	public enum ObjectType {
 		/**
 		 * Represent a normal Integer:<br/>
@@ -223,6 +241,10 @@ public class DatabasesHandler {
 		 */
 		TIME,
 		/**
+		 * Represent any kind of data
+		 */
+		NONE,
+		/**
 		 * Represent a date and a time with year, month, day, hour, minute, and second values
 		 */
 		TIMESTAMP;
@@ -240,12 +262,12 @@ public class DatabasesHandler {
 	 * @return The object or null if it doesn`t exist
 	 */
 	
-	public List<Object> getValues(String data, String column_key, String key){
+	public List<Object> getValues(String data, Condition... conditions){
 		if(init){
 			if(database_used.equals(DatabaseType.MYSQL)){
-				return getValueMySQL(data, column_key, key);
+				return getValueMySQL(data, conditions);
 			} else if(database_used.equals(DatabaseType.SQLITE)){
-				return getValueSQLite(data, column_key, key);
+				return getValueSQLite(data, conditions);
 			}
 		} else {
 			new IllegalStateException("The DatabaseHandler wasn`t init !").printStackTrace();
@@ -278,7 +300,7 @@ public class DatabasesHandler {
 		return;
 	}
 	
-	private String getValueCommandStringSet(ArrayList<String> keys, ArrayList<String> values){
+	private String getValueCommandStringSet(ArrayList<String> keys, ArrayList<Object> values){
 		String main = "";
 		if(database_used.equals(DatabaseType.MYSQL)){
 			main = "REPLACE INTO `" + table + "` (";
@@ -293,7 +315,7 @@ public class DatabasesHandler {
         	}
         }
         main = main + ") VALUES (";
-        for(String value : values){
+        for(Object value : values){
         	if(main.endsWith("'")){
         		main = main + ", '" + value + "'";
         	} else {
@@ -304,9 +326,9 @@ public class DatabasesHandler {
         return main;
 	}
 	
-	private List<String> getValueCommandStringUpdate(String column_refer, String key_not_changed, ArrayList<String> keys, ArrayList<String> values){
+	private List<String> getValueCommandStringUpdate(ArrayList<String> keys, ArrayList<Object> values, Condition... condition){
 		List<String> commands = new LinkedList<String>();
-		for(Object actual_primary_key : getValues(primary_key, column_refer, key_not_changed)){
+		for(Object actual_primary_key : getValues(primary_key, condition)){
 			String main = "";
 			if(database_used.equals(DatabaseType.MYSQL)){
 				main = main + "REPLACE INTO `" + table + "` (";
@@ -318,7 +340,7 @@ public class DatabasesHandler {
 	        	main = main + ", `" + key + "`";
 	        }
 	        main = main + ") VALUES (" + actual_primary_key.toString();
-	        for(String value : values){
+	        for(Object value : values){
 	        	main = main + ", '" + value + "'";	
 	        }
 	        main = main + ")";
@@ -340,7 +362,7 @@ public class DatabasesHandler {
 	public void InsertValueForce(DataObject[] objects){
 		if(init){
 			ArrayList<String> keys = new ArrayList<String>(objects.length + 1);
-			ArrayList<String> values = new ArrayList<String>(objects.length + 1);
+			ArrayList<Object> values = new ArrayList<Object>(objects.length + 1);
 			for(DataObject d : objects){
 				keys.add(d.getKey());
 				values.add(d.getData());
@@ -397,19 +419,17 @@ public class DatabasesHandler {
 	/**
 	 * 
 	 * Insert or replace a value in the database.<br/>
-	 * It will replace all the values if:<br/>
-	 * "WHERE [column_refer]=[key_not_changed]<br/>
+	 * It will replace all the values if the condition is true<br/>
 	 * 
-	 * @param column_refer The column wher the key_not_changed will be tested !
-	 * @param key_not_changed The key to identify the line that must be edited.
+	 * @param condition The condition where the data will be replaced
 	 * @param objects A list of DataObject to set on a line
 	 * 
 	 */
 	
-	public void InsertOrUpdateValue(String column_refer, String key_not_changed, DataObject[] objects){
+	public void InsertOrUpdateValue(DataObject[] objects, Condition... condition){
 		if(init){
 			ArrayList<String> keys = new ArrayList<String>(objects.length + 1);
-			ArrayList<String> values = new ArrayList<String>(objects.length + 1);
+			ArrayList<Object> values = new ArrayList<Object>(objects.length + 1);
 			for(DataObject d : objects){
 				keys.add(d.getKey());
 				values.add(d.getData());
@@ -418,7 +438,7 @@ public class DatabasesHandler {
 				MySQL db = new MySQL(HOST, USER, PASS, DATABASE, PORT);
 	            try {
 	            	db.open(false);
-	            	List<String> all_commands = getValueCommandStringUpdate(column_refer, key_not_changed, keys, values);
+	            	List<String> all_commands = getValueCommandStringUpdate(keys, values, condition);
 	            	for(String command : all_commands){
 	            		db.update(command);
 	            	}
@@ -431,7 +451,7 @@ public class DatabasesHandler {
 			} else if(database_used.equals(DatabaseType.SQLITE)){
 				SQLite db = new SQLite();
                 try {
-                	List<String> all_commands = getValueCommandStringUpdate(column_refer, key_not_changed, keys, values);
+                	List<String> all_commands = getValueCommandStringUpdate(keys, values, condition);
                 	db.open(path, false);
                 	for(String command : all_commands){
 	            		db.update(command);
@@ -520,8 +540,15 @@ public class DatabasesHandler {
 	
 	public void clearTable(){
 		if(init){
-			String command_clear = "DELETE FROM " + table + ";";
-			String command_reset = "ALTER TABLE " + table + " AUTO_INCREMENT = 1" + ";";
+			String command_clear = "DELETE FROM " + table;
+			String command_reset;
+			if(database_used == DatabaseType.MYSQL){
+				command_reset = "ALTER TABLE " + table + " AUTO_INCREMENT = 1";
+			} else if(database_used == DatabaseType.SQLITE) {
+				command_reset = "DELETE FROM sqlite_sequence WHERE name='" + table + "'";
+			} else {
+				return;
+			}
 			if(database_used.equals(DatabaseType.MYSQL)){
 				MySQL db = new MySQL(HOST, USER, PASS, DATABASE, PORT);
 				try {
@@ -640,7 +667,7 @@ public class DatabasesHandler {
         }
         try {
             db.open(path, true);
-            String command = "CREATE TABLE IF NOT EXISTS " + table + " ( " + primary_key + " INTEGER NOT NULL PRIMARY KEY);";
+            String command = "CREATE TABLE IF NOT EXISTS " + table + " ( " + primary_key + " INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT);";
             db.update(command);
         } catch (SQLException ex) {
         	ex.printStackTrace();
@@ -652,12 +679,18 @@ public class DatabasesHandler {
         return true;
     }
 	
-	private List<Object> getValueSQLite(String data, String column_key, String key) {
+	private List<Object> getValueSQLite(String data, Condition... conditions) {
 		SQLite db = new SQLite();
 		List<Object> ret = new LinkedList<Object>();
         try {
             db.open(path, false);
-            String command = "SELECT * FROM `" + table + "` WHERE " + column_key + "='" + key + "';";
+            String command = "SELECT * FROM `" + table + "` WHERE ";
+            for(int i = 0; i < conditions.length; i++){
+            	Condition con = conditions[i];
+            	if(i == 0) command = command + con.column_key + "='" + con.key + "' ";
+            	else command = command + "AND " + con.column_key + "='" + con.key + "' ";
+            }
+            command = command + ";";
             ResultSet result = db.query(command);
             while(result.next()){
                 ret.add(result.getObject(data));
@@ -728,12 +761,18 @@ public class DatabasesHandler {
         return true;
 	}
 	
-	private List<Object> getValueMySQL(String data, String column_key, String key) {
+	private List<Object> getValueMySQL(String data, Condition... conditions) {
 			MySQL db = new MySQL(HOST, USER, PASS, DATABASE, PORT);
 			List<Object> ret = new LinkedList<Object>();
 	        try {
 	            db.open(false);
-	            String command = "SELECT * FROM `" + table + "` WHERE " + column_key + "='" + key + "';";
+	            String command = "SELECT * FROM `" + table + "` WHERE ";
+	            for(int i = 0; i < conditions.length; i++){
+	            	Condition con = conditions[i];
+	            	if(i == 0) command = command + con.column_key + "='" + con.key + "' ";
+	            	else command = command + "AND " + con.column_key + "='" + con.key + "' ";
+	            }
+	            command = command + ";";
 	            ResultSet result = db.query(command);
 	            while(result.next()){
 	                ret.add(result.getObject(data));
