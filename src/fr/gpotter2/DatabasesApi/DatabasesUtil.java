@@ -16,8 +16,6 @@
  * 
  */
 
-package fr.cabricraft.batofb.util;
-
 import java.net.ConnectException;
 import java.sql.Connection;
 import java.sql.DriverManager;

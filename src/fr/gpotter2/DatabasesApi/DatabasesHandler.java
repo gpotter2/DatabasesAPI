@@ -16,8 +16,6 @@
  * 
  */
 
-package fr.cabricraft.batofb.util;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
@@ -27,10 +25,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-
-import fr.cabricraft.batofb.util.DatabasesUtil.DataObject;
-import fr.cabricraft.batofb.util.DatabasesUtil.MySQL;
-import fr.cabricraft.batofb.util.DatabasesUtil.SQLite;
 
 /**
  * 
@@ -328,23 +322,29 @@ public class DatabasesHandler {
 	
 	private List<String> getValueCommandStringUpdate(ArrayList<String> keys, ArrayList<Object> values, Condition... condition){
 		List<String> commands = new LinkedList<String>();
-		for(Object actual_primary_key : getValues(primary_key, condition)){
-			String main = "";
-			if(database_used.equals(DatabaseType.MYSQL)){
-				main = main + "REPLACE INTO `" + table + "` (";
-			} else if(database_used.equals(DatabaseType.SQLITE)) {
-				main = main + "INSERT OR REPLACE INTO `" + table + "` (";
+		List<Object> list_o_get = getValues(primary_key, condition);
+		if(list_o_get.size() == 0){
+			commands.add(getValueCommandStringSet(keys, values));
+			return commands;
+		} else {
+			for(Object actual_primary_key : list_o_get){
+				String main = "";
+				if(database_used.equals(DatabaseType.MYSQL)){
+					main = main + "REPLACE INTO `" + table + "` (";
+				} else if(database_used.equals(DatabaseType.SQLITE)) {
+					main = main + "INSERT OR REPLACE INTO `" + table + "` (";
+				}
+				main = main + "`" + primary_key + "`";
+		        for(String key : keys){
+		        	main = main + ", `" + key + "`";
+		        }
+		        main = main + ") VALUES (" + actual_primary_key.toString();
+		        for(Object value : values){
+		        	main = main + ", '" + value + "'";	
+		        }
+		        main = main + ")";
+		        commands.add(main);
 			}
-			main = main + "`" + primary_key + "`";
-	        for(String key : keys){
-	        	main = main + ", `" + key + "`";
-	        }
-	        main = main + ") VALUES (" + actual_primary_key.toString();
-	        for(Object value : values){
-	        	main = main + ", '" + value + "'";	
-	        }
-	        main = main + ")";
-	        commands.add(main);
 		}
         return commands;
 	}
