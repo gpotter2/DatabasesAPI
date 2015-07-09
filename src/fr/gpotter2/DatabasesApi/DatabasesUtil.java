@@ -16,6 +16,8 @@
  * 
  */
 
+package dbgui;
+
 import java.net.ConnectException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -51,7 +53,7 @@ public class DatabasesUtil {
 		}
 	}
 	
-	public static class MySQL {
+	public static class UtilMySQL {
 
 	    private String HOST = "";
 	    private String USER = "";
@@ -60,7 +62,7 @@ public class DatabasesUtil {
 	    private String PORT = "";
 	    private Connection con = null;
 
-	    public MySQL(String host, String user, String pass, String database, String port) {
+	    public UtilMySQL(String host, String user, String pass, String database, String port) {
 	        HOST = host;
 	        USER = user;
 	        PASS = pass;
@@ -124,7 +126,7 @@ public class DatabasesUtil {
 	    }
 	}
 	
-	public static class SQLite {
+	public static class UtilSQLite {
 
 	    private Connection con = null;
 	    
