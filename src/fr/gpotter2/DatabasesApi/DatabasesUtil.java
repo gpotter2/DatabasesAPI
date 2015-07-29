@@ -16,19 +16,22 @@
  * 
  */
 
-package dbgui;
-
 import java.net.ConnectException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Properties;
+
+import DatabasesHandler.Condition;
 
 /**
  * The DatabasesHandler util class
  * 
  * @author gpotter2
+ * @version 1.3
  * 
  */
 
@@ -53,14 +56,96 @@ public class DatabasesUtil {
 		}
 	}
 	
-	public static class UtilMySQL {
+	public static abstract class UtilCommon {
+		
+		protected Connection con = null;
+		/**
+		 * 
+		 * @param query
+		 * @return
+		 * @throws SQLException
+		 * @Deprecated May be used for SQL injections !!
+		 */
+		@Deprecated
+		public ResultSet query(String query) throws SQLException {
+	        return this.con.createStatement().executeQuery(query);
+	    }
+		
+		public ResultSet query(String query, Condition... conditions) throws SQLException {
+			try {
+				PreparedStatement st = this.con.prepareStatement(query);
+				int i = 1;
+				for(Condition c : conditions){
+					st.setObject(i, c.key);
+					i++;
+				}
+				return st.executeQuery();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+	    	return null;
+	    }
+		/**
+		 * 
+		 * @param query
+		 * @return
+		 * @throws SQLException
+		 * @Deprecated May be used for SQL injections !!
+		 */
+		@Deprecated
+	    public int update(String query) throws SQLException {
+	        return this.con.createStatement().executeUpdate(query);
+	    }
+	    
+	    public int update(String query, Condition... conditions) throws SQLException {
+			try {
+				PreparedStatement st = this.con.prepareStatement(query);
+				int i = 1;
+				for(Condition c : conditions){
+					st.setObject(i, c.key);
+					i++;
+				}
+				return st.executeUpdate();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+	    	return -1;
+	    }
+	    
+		@SuppressWarnings("unchecked")
+		public int update(String query, ArrayList<? extends Object>... objects){
+	    	try {
+				PreparedStatement st = this.con.prepareStatement(query);
+				int i = 1;
+				for(ArrayList<? extends Object> array : objects){
+					for(Object o : array){
+						st.setObject(i, o);
+						i++;
+					}
+				}
+				return st.executeUpdate();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+	    	return -1;
+	    }
+		
+		public Connection getConnection() {
+	        return this.con;
+	    }
+		
+		public abstract void close();
+		public abstract boolean checkTable(String table_name) throws SQLException;
+		
+	}
+	
+	public static class UtilMySQL extends UtilCommon {
 
 	    private String HOST = "";
 	    private String USER = "";
 	    private String PASS = "";
 	    private String DATABASE = "";
 	    private String PORT = "";
-	    private Connection con = null;
 
 	    public UtilMySQL(String host, String user, String pass, String database, String port) {
 	        HOST = host;
@@ -97,14 +182,6 @@ public class DatabasesUtil {
 	        return i == 1;
 	    }
 
-	    public ResultSet query(String query) throws SQLException {
-	        return this.con.createStatement().executeQuery(query);
-	    }
-
-	    public int update(String query) throws SQLException {
-	        return this.con.createStatement().executeUpdate(query);
-	    }
-
 	    public void close() {
 	        try {
 	            this.con.close();
@@ -120,15 +197,9 @@ public class DatabasesUtil {
 	        count.close();
 	        return give;
 	    }
-
-	    public Connection getConnection() {
-	        return this.con;
-	    }
 	}
 	
-	public static class UtilSQLite {
-
-	    private Connection con = null;
+	public static class UtilSQLite extends UtilCommon {
 	    
 	    public Connection open(String path, boolean print) throws SQLException {
 	    	try {
@@ -162,25 +233,13 @@ public class DatabasesUtil {
 	        count.close();
 	        return (i == 1) ? true : false;
 	    }
-
-	    public ResultSet query(String query) throws SQLException {
-	        return con.createStatement().executeQuery(query);
-	    }
-
-	    public synchronized int update(String query) throws SQLException {
-	        return con.createStatement().executeUpdate(query);
-	    }
-
+	    
 	    public void close() {
 	        try {
 	            con.close();
 	        } catch (SQLException e) {
 	            System.err.println("Error while closing SQLite !");
 	        }
-	    }
-
-	    public Connection getConnection() {
-	        return con;
 	    }
 	}
 	

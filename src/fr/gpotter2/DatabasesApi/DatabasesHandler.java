@@ -16,8 +16,6 @@
  * 
  */
 
-package dbgui;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
@@ -28,9 +26,9 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import dbgui.DatabasesUtil.DataObject;
-import dbgui.DatabasesUtil.UtilMySQL;
-import dbgui.DatabasesUtil.UtilSQLite;
+import DatabasesUtil.DataObject;
+import DatabasesUtil.UtilMySQL;
+import DatabasesUtil.UtilSQLite;
 
 /**
  * 
@@ -38,6 +36,7 @@ import dbgui.DatabasesUtil.UtilSQLite;
  * The simple api to use MySQL and SQLite !!
  * 
  * @author gpotter2
+ * @version 1.3
  *
  */
 
@@ -327,7 +326,7 @@ public class DatabasesHandler {
 		} else if(database_used.equals(DatabaseType.SQLITE)) {
 			main = "INSERT OR REPLACE INTO `" + table + "` (";
 		}
-        for(String key : keys){
+		for(String key : keys){
         	if(main.endsWith("`")){
         		main = main + ", `" + key + "`";
         	} else {
@@ -335,11 +334,11 @@ public class DatabasesHandler {
         	}
         }
         main = main + ") VALUES (";
-        for(Object value : values){
-        	if(main.endsWith("'")){
-        		main = main + ", '" + value + "'";
+        for(int i = 0; i < values.size(); i++){
+        	if(main.endsWith("?")){
+        		main = main + ", ?";
         	} else {
-        		main = main + "'" + value + "'";
+        		main = main + "?";
         	}
         }
         main = main + ");";
@@ -365,8 +364,8 @@ public class DatabasesHandler {
 		        	main = main + ", `" + key + "`";
 		        }
 		        main = main + ") VALUES (" + actual_primary_key.toString();
-		        for(Object value : values){
-		        	main = main + ", '" + value + "'";	
+		        for(int i = 0; i < values.size(); i++){
+		        	main = main + ", ?";	
 		        }
 		        main = main + ")";
 		        commands.add(main);
@@ -402,6 +401,7 @@ public class DatabasesHandler {
 	 * 
 	 */
 	
+	@SuppressWarnings("unchecked")
 	public void InsertValueForce(DataObject[] objects){
 		if(init){
 			ArrayList<String> keys = new ArrayList<String>(objects.length + 1);
@@ -415,7 +415,7 @@ public class DatabasesHandler {
 				try {
 					db.open(false);
 					String command = getValueCommandStringSet(keys, values);
-	                db.update(command);
+	                db.update(command, values);
 				} catch (SQLException | ConnectException e) {
 					System.err.println("Error while setting a value in MySQL !");
 				} finally {
@@ -426,7 +426,7 @@ public class DatabasesHandler {
                 try {
                 	String command = getValueCommandStringSet(keys, values);
                     db.open(path, false);
-                    db.update(command);
+                    db.update(command, values);
                 } catch (SQLException ex) {
                 	ex.printStackTrace();
                 	System.err.println("Error while setting a value in SQLite !");
@@ -471,6 +471,7 @@ public class DatabasesHandler {
 	 * 
 	 */
 	
+	@SuppressWarnings("unchecked")
 	public void InsertOrUpdateValue(DataObject[] objects, Condition... conditions){
 		if(init){
 			ArrayList<String> keys = new ArrayList<String>(objects.length + 1);
@@ -485,7 +486,7 @@ public class DatabasesHandler {
 	            	db.open(false);
 	            	List<String> all_commands = getValueCommandStringUpdate(keys, values, conditions);
 	            	for(String command : all_commands){
-	            		db.update(command);
+	            		db.update(command, values);
 	            	}
 	            } catch (SQLException | ConnectException ex) {
 	            	ex.printStackTrace();
@@ -499,7 +500,7 @@ public class DatabasesHandler {
                 	List<String> all_commands = getValueCommandStringUpdate(keys, values, conditions);
                 	db.open(path, false);
                 	for(String command : all_commands){
-	            		db.update(command);
+	            		db.update(command, values);
 	            	}
                 } catch (SQLException ex) {
                 	ex.printStackTrace();
@@ -543,16 +544,16 @@ public class DatabasesHandler {
 			String command = null;
 			for(Condition c : conditions){
 				if(command == null){
-					command = "SELECT count(*) FROM " + table + " WHERE " + c.column_key + "='" + c.key + "' ";
+					command = "SELECT count(*) FROM " + table + " WHERE " + c.column_key + "=? ";
 				} else {
-					command = command + "AND " + c.column_key + "='" + c.key + "' ";
+					command = command + "AND " + c.column_key + "=? ";
 				}
 			}
 			if(database_used.equals(DatabaseType.MYSQL)){
 				UtilMySQL db = new UtilMySQL(HOST, USER, PASS, DATABASE, PORT);
 	            try {
 	                db.open(false);
-	                ResultSet result = db.query(command);
+	                ResultSet result = db.query(command, conditions);
 	                byte i = 0;
 	    	        if (result.next()) {
 	    	            i = result.getByte(1);
@@ -569,7 +570,7 @@ public class DatabasesHandler {
 				UtilSQLite db = new UtilSQLite();
                 try {
                     db.open(path, false);
-                    ResultSet result = db.query(command);
+                    ResultSet result = db.query(command, conditions);
                     byte i = 0;
 	    	        if (result.next()) {
 	    	            i = result.getByte(1);
@@ -606,7 +607,7 @@ public class DatabasesHandler {
 		} else if(database_used.equals(DatabaseType.SQLITE)){
 			return createTableSQLite();
 		} else {
-			new NullPointerException().printStackTrace();
+			new NullPointerException().printStackTrace(); 
 			return false;
 		}
 	}
@@ -619,6 +620,7 @@ public class DatabasesHandler {
 	 * 
 	 */
 	
+	@SuppressWarnings("deprecation")
 	public void clearTable(){
 		if(init){
 			String command_clear = "DELETE FROM " + table;
@@ -670,9 +672,9 @@ public class DatabasesHandler {
 		for(int i = 0; i < conditions.length; i++){			
 			Condition c = conditions[i];
 			if(conditions.length > (i + 1)){
-				result = result + c.column_key + "='" + c.key + "' AND ";
+				result = result + c.column_key + "=? AND ";
 			} else {
-				result = result + c.column_key + "='" + c.key + "'";
+				result = result + c.column_key + "=?";
 			}
 		}
         return result;
@@ -692,7 +694,7 @@ public class DatabasesHandler {
 				try {
 					db.open(false);
 					String command = getValueCommandStringDelete(conditions);
-	                db.update(command);
+	                db.update(command, conditions);
 				} catch (SQLException | ConnectException e) {
 					System.err.println("Error while setting a value in MySQL !");
 				} finally {
@@ -703,7 +705,7 @@ public class DatabasesHandler {
                 try {
                 	String command = getValueCommandStringDelete(conditions);
                     db.open(path, false);
-                    db.update(command);
+                    db.update(command, conditions);
                 } catch (SQLException ex) {
                 	ex.printStackTrace();
                 	System.err.println("Error while setting a value in SQLite !");
@@ -784,6 +786,7 @@ public class DatabasesHandler {
 	 * 
 	 */
 	
+	@SuppressWarnings("deprecation")
 	private boolean createTableSQLite() {
 		UtilSQLite db = new UtilSQLite();
 		File f = new File(path);
@@ -830,11 +833,11 @@ public class DatabasesHandler {
             String command = "SELECT * FROM `" + table + "` WHERE ";
             for(int i = 0; i < conditions.length; i++){
             	Condition con = conditions[i];
-            	if(i == 0) command = command + con.column_key + "='" + con.key + "' ";
-            	else command = command + "AND " + con.column_key + "='" + con.key + "' ";
+            	if(i == 0) command = command + con.column_key + "=? ";
+            	else command = command + "AND " + con.column_key + "=? ";
             }
             command = command + ";";
-            ResultSet result = db.query(command);
+            ResultSet result = db.query(command, conditions);
             while(result.next()){
                 ret.add(result.getObject(data));
             }
@@ -847,6 +850,7 @@ public class DatabasesHandler {
         return ret;
     }
 	
+	@SuppressWarnings("deprecation")
 	private boolean columnExistSQLite(String column){
 		UtilSQLite db = new UtilSQLite();
         try {
@@ -862,6 +866,7 @@ public class DatabasesHandler {
         return true;
 	}
 	
+	@SuppressWarnings("deprecation")
 	private void addColumnSQLite(String column, ObjectType type) {
 		UtilSQLite db = new UtilSQLite();
         try {
@@ -884,6 +889,7 @@ public class DatabasesHandler {
 	 * 
 	 */
 	
+	@SuppressWarnings("deprecation")
 	private boolean createTableMySQL(){
 		UtilMySQL db = new UtilMySQL(HOST, USER, PASS, DATABASE, PORT);
         try {
@@ -912,11 +918,11 @@ public class DatabasesHandler {
 	            String command = "SELECT * FROM `" + table + "` WHERE ";
 	            for(int i = 0; i < conditions.length; i++){
 	            	Condition con = conditions[i];
-	            	if(i == 0) command = command + con.column_key + "='" + con.key + "' ";
-	            	else command = command + "AND " + con.column_key + "='" + con.key + "' ";
+	            	if(i == 0) command = command + con.column_key + "=? ";
+	            	else command = command + "AND " + con.column_key + "=? ";
 	            }
 	            command = command + ";";
-	            ResultSet result = db.query(command);
+	            ResultSet result = db.query(command, conditions);
 	            while(result.next()){
 	                ret.add(result.getObject(data));
 	            }
@@ -929,6 +935,7 @@ public class DatabasesHandler {
 	        return ret;
 	}
 	
+	@SuppressWarnings("deprecation")
 	private boolean columnExistMySQL(String column){
 		UtilMySQL db = new UtilMySQL(HOST, USER, PASS, DATABASE, PORT);
         try {
@@ -944,6 +951,7 @@ public class DatabasesHandler {
         return true;
 	}
 	
+	@SuppressWarnings("deprecation")
 	private void addColumnMySQL(String column, ObjectType type) {
 		UtilMySQL db = new UtilMySQL(HOST, USER, PASS, DATABASE, PORT);
         try {
