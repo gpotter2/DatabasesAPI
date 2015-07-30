@@ -1,0 +1,170 @@
+<html>
+<head>
+<title>Databases API Manual</title><br/>
+
+<style>
+body{
+   background-color: grey;
+}
+#title {
+   background-color: white;
+   margin-left: 1%;
+   margin-right: 1%;
+   margin-bottom: 0;
+   margin-top: 1%;
+   padding: 1%;
+   box-shadow: -1px 2px 5px 1px rgba(0, 0, 0, 0.7),
+            -1px 2px 20px rgba(255, 255, 255, 0.6) inset; 
+   border-bottom: 1px solid grey;
+}
+#content {
+   background-color: white;   
+   margin-left: 1%;
+   margin-right: 1%;
+   margin-bottom: 1%;
+   margin-top: 0;
+   padding: 1%;
+   box-shadow: -1px 2px 5px 1px rgba(0, 0, 0, 0.7); 
+}
+#menu {
+   position: absolute;
+   top: 15%;
+   right: 5%;
+   padding: 1%;
+   border: 1px solid grey;
+   font-size: 14;
+}
+.step {
+   border-bottom: 5px solid grey;
+   margin: 1%;
+   padding-left: 0.5%;
+   padding-right: 0.5%;
+   padding-top: 0.5%;
+   padding-bottom: 2%;
+}
+}.step:target {
+   background-color: yellow;
+}
+.code{
+   border: 1px solid black;
+   position: relative;
+   margin-top: 22px;
+   color: #124FF7;
+   left: 1%;
+   background-color: #CACACA;
+   width: 98%;
+}
+.code::before{
+   content: "Java code:";
+   color: grey;
+   top: -20px;
+   left: -1%;
+   font-size: 13;
+   position: absolute;
+   border: 1px solid grey;
+   background-color: #E1E1E1;
+}
+.code:hover {
+   background-color: #62DBCB;
+}
+a:link, a:visited, a:hover, a:active {
+    color: blue;
+}
+</style>
+
+</head>
+<body>
+	<center><h1 id="title"><u>Databases API</u></h1></center>
+	<div id="content">
+		<div id="menu">
+			<u>Index:</u><br/>
+                        <ul>
+				<li><a href="#setup">Setting up Handler</a>
+				<ul>
+					<li><a href="#add_columns">Setting up Handler</a></li>
+				</ul>
+				</li>
+				<li><a href="#functions">Functions</a>
+				<ul>
+					<li><a href="#insert_update">Insert or Update</a></li>
+					<li><a href="#insert">Insert (deprecated)</a></li>
+					<li><a href="#get">Get value</a></li>
+					<li><a href="#exist">Detect if value exist</a></li>
+					<li><a href="#exist_nbr">Number of objects existing</a></li>
+					<li><a href="#delete">Delete value</a></li>
+					<li><a href="#clear">Clear table</a></li>
+				</ul>
+				</li>
+			</ul>
+                        
+		</div>
+		An API to use <b>MySQL</b> and <b>SQLite</b> functions in java to use with bukkit/craftbukkit servers.<br/>
+		<br/>
+		<i><u>The API is now safe against SQL Injections !</u></i><br/>
+			<h2><u><b>Installation:</b></u></h2>
+		Just add the 2 classes (DatabasesHandler.java & DatabasesUtil.java) to your plugin.<br/>
+		<br/>
+		<center><h2 id="setup"><u>Setting up the Handler:</u></h2></center>
+		<div class="step">
+			First, create a new instance of the DatabasesHandler class. This will be different if you are using <b>MySQL</b> or <b>SQLite</b>:
+			<h5><u>MySQL</u></h5>
+			<div class="code">DatabasesHandler handler = new DatabasesHandler(DatabaseType.MySQL, "my_table_name");</div>
+			<h5><u>SQLite</u></h5>
+			<div class="code">String path = getDataFolder().getAbsolutePath() +  File.separator + "database.db";<br/>
+			DatabasesHandler handler = new DatabasesHandler(DatabaseType.SQLite, "my_table_name", path);</div>
+		</div>
+		<div class="step">
+			Then init the handler with init():
+			<h5><u>MySQL</u></h5>
+			<div class="code">handler.init("host", "user", "password", "database_name", "port (default:3306)", "primary_key_name");</div>
+			<h5><u>SQLite</u></h5>
+			<div class="code">handler.init(null, null, null, "database_name", null, "primary_key_name");</div>
+		</div>
+		<h3 id="add_columns"><u>Add (if not exist) columns:</u></h3>
+		<div class="step">
+			Then you can add the columns (just add them, if they already exist, the handler will ignore it). The function works with the ObjectType enum. It correspond to the type of the data that will be contained in the column. You can see them in the docs. Here, VARCHAR is a String.<br/>
+			<div class="code">handler.addColumn("name", ObjectType.VARCHAR);<br/>
+				handler.addColumn("value", ObjectType.VARCHAR);
+			</div>
+			You can now start to use the databases ! A dataObject will be insert in the line that correspond to all conditions (it may create the line). The "Condition" means "WHERE key=value" so (WHERE 'name'="my_object") would be new Condition("name", "my_object);<br/>
+		</div>
+		<center><h2 id="functions"><u>Available Functions:</u></h2></center>
+		<br/>
+		<h3 id="insert_update"><u>Insert (or update if exist) a value:</u></h3>
+		<div class="step">
+			<div class="code">DataObject[] da = new DataObject[2];<br/>
+			da[0] = new DataObject("name", "my_object");<br/>
+			da[1] = new DataObject("value", "Hey !");<br/>
+			handler.InsertOrUpdateValue(da, new Condition("name", "my_object");</div>
+		</div>
+		<h3 id="insert"><u>Force Insert a value even if it already exist (deprecated):</u></h3>
+		<div class="step">
+			<div class="code">DataObject[] da = new DataObject[2];<br/>
+			da[0] = new DataObject("name", "my_object");<br/>
+			da[1] = new DataObject("value", "Hey !");<br/>
+			handler.InsertValueForce(da);</div>
+		</div>
+		<h3 id="get"><u>Get all values that correspond to a Condition:</u></h3>
+		<div class="step">
+			<div class="code">List&lt;Object&gt; values = handler.getValues("value", new Condition("name", "my_object"));</div>
+			Here, values contains only one object: a String: "Hey !"<br/>
+		</div>
+		<h3 id="exist"><u>Detect if a value exist with Conditions:</u></h3>
+		<div class="step">
+			<div class="code">boolean exist = handler.existInTable(new Condition("name", "my_object"));</div>
+		</div>
+		<h3 id="exist_nbr"><u>Get the number of objects existing with Conditions:</u></h3>
+		<div class="step">
+			<div class="code">int number_exist = handler.numberObjectsInTable(new Condition("name", "my_object"));</div>
+		</div>
+		<h3 id="delete"><u>Delete a value with Conditions:</u></h3>
+		<div class="step">
+			<div class="code">handler.deleteObject(new Condition("name", "my_object"));</div>
+		</div>
+		<h3 id="clear"><u>Clear a table:</u></h3>
+		<div class="step">
+			<div class="code">handler.clearTable();</div>
+		</div>
+		<center><a href="#title">Top</a></center>
+	</div>
+</body>
